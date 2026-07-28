@@ -3,7 +3,6 @@ import type { Food, Language, MealLogEntry, MealType, PersistedState, Settings }
 import { newId } from './types'
 import { loadState, saveState } from './storage'
 import { buildSeedFoods } from './seed'
-import type { SpinResult } from '../engine/spin'
 import { cryptoRng, seededRng, type Rng } from '../engine/rng'
 
 /** Deterministic RNG hook for the E2E suite: `?testSeed=42` in the URL makes
@@ -27,7 +26,7 @@ export interface AppStore extends PersistedState {
    *  prune step follows, so `onboarded` flips separately in finishOnboarding. */
   setupProfile: (language: Language, pinHash: string, pinSalt: string) => void
   finishOnboarding: () => void
-  confirmMeal: (result: SpinResult, mealType: MealType) => void
+  confirmMeal: (foodIds: string[], mealType: MealType, wasStar: boolean) => void
   addFood: (food: Omit<Food, 'id' | 'createdAt'>) => void
   updateFood: (id: string, patch: Partial<Omit<Food, 'id' | 'createdAt'>>) => void
   deleteFood: (id: string) => void
@@ -51,16 +50,15 @@ export const useAppStore = create<AppStore>((set) => ({
 
   finishOnboarding: () => set({ onboarded: true }),
 
-  confirmMeal: (result, mealType) =>
+  confirmMeal: (foodIds, mealType, wasStar) =>
     set((s) => {
-      if (result.kind === 'empty') return s
-      const foodIds = result.kind === 'single' ? [result.food.id] : result.foods.map((f) => f.id)
+      if (foodIds.length === 0) return s
       const entry: MealLogEntry = {
         id: newId(),
         at: new Date().toISOString(),
         mealType,
-        foodIds,
-        wasStar: result.isStar,
+        foodIds: [...new Set(foodIds)],
+        wasStar,
       }
       return { log: [entry, ...s.log] }
     }),
@@ -76,7 +74,14 @@ export const useAppStore = create<AppStore>((set) => ({
     })),
 
   deleteFood: (id) =>
-    set((s) => ({ foods: s.foods.filter((f) => f.id !== id) })),
+    set((s) => ({
+      foods: s.foods.filter((f) => f.id !== id),
+      // Jackpot combinations referencing the deleted food can never land.
+      settings: {
+        ...s.settings,
+        jackpotCombos: s.settings.jackpotCombos.filter((combo) => !combo.includes(id)),
+      },
+    })),
 
   updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
 

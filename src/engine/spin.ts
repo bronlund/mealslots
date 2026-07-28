@@ -4,7 +4,12 @@ import type { Rng } from './rng'
 
 export type EngineSettings = Pick<
   Settings,
-  'slotMode' | 'starDropsEnabled' | 'starChance' | 'antiRepeatHours'
+  | 'slotMode'
+  | 'jackpotThreeOfAKind'
+  | 'jackpotCombos'
+  | 'starDropsEnabled'
+  | 'starChance'
+  | 'antiRepeatHours'
 >
 
 export interface SpinContext {
@@ -17,10 +22,9 @@ export interface SpinContext {
 }
 
 export type SpinResult =
-  /** Single-dish mode: all three reels land on this food. */
-  | { kind: 'single'; food: Food; isStar: boolean }
-  /** Combo mode: one food per combo category that has an eligible pool. */
-  | { kind: 'combo'; foods: Food[]; isStar: boolean }
+  /** One landed food per reel: three independent draws in single mode, one
+   *  per combo category in combo mode. */
+  | { kind: 'spin'; foods: Food[]; isStar: boolean; isJackpot: boolean }
   /** No enabled foods match the meal type — the UI shows a friendly setup hint. */
   | { kind: 'empty' }
 
@@ -71,35 +75,60 @@ function drawFrom(pool: Food[], ctx: SpinContext): Food {
   return weightedDraw(pool, weights, ctx.rng)
 }
 
+/** A jackpot is three of a kind (when enabled) or any parent-defined
+ *  combination, matched regardless of reel order. */
+export function checkJackpot(
+  landed: Food[],
+  settings: Pick<EngineSettings, 'jackpotThreeOfAKind' | 'jackpotCombos'>,
+): boolean {
+  if (landed.length < 2) return false
+  if (
+    settings.jackpotThreeOfAKind &&
+    landed.length === 3 &&
+    landed.every((f) => f.id === landed[0].id)
+  ) {
+    return true
+  }
+  const key = landed
+    .map((f) => f.id)
+    .sort()
+    .join('|')
+  return settings.jackpotCombos.some(
+    (combo) => combo.length === landed.length && [...combo].sort().join('|') === key,
+  )
+}
+
 export function spin(ctx: SpinContext): SpinResult {
   const { settings, mealType, foods } = ctx
 
-  // Star drop check happens once per spin, in either mode. A star result is a
-  // whole challenge dish and replaces the normal outcome.
+  // Star drop check happens once per spin, in either mode. A star drop fills
+  // every reel with the challenge food — a guaranteed golden jackpot.
   if (settings.starDropsEnabled) {
     const starPool = eligibleFoods(foods, mealType, { star: true })
     if (starPool.length > 0 && ctx.rng() < settings.starChance) {
       const food = starPool[Math.floor(ctx.rng() * starPool.length)]
-      return { kind: 'single', food, isStar: true }
+      return { kind: 'spin', foods: [food, food, food], isStar: true, isJackpot: true }
     }
   }
 
+  let landed: Food[]
   if (settings.slotMode === 'combo') {
-    const picks: Food[] = []
+    landed = []
     for (const category of COMBO_CATEGORIES) {
       const pool = eligibleFoods(foods, mealType, { star: false }).filter(
         (f) => f.comboCategory === category,
       )
-      if (pool.length > 0) picks.push(drawFrom(pool, ctx))
+      if (pool.length > 0) landed.push(drawFrom(pool, ctx))
     }
-    if (picks.length === 0) return { kind: 'empty' }
-    if (picks.length === 1) return { kind: 'single', food: picks[0], isStar: false }
-    return { kind: 'combo', foods: picks, isStar: false }
+  } else {
+    const pool = eligibleFoods(foods, mealType, { star: false })
+    if (pool.length === 0) return { kind: 'empty' }
+    // Three independent draws (repeats allowed) — matching reels are possible
+    // but never guaranteed, which is what makes a jackpot special.
+    landed = [drawFrom(pool, ctx), drawFrom(pool, ctx), drawFrom(pool, ctx)]
   }
-
-  const pool = eligibleFoods(foods, mealType, { star: false })
-  if (pool.length === 0) return { kind: 'empty' }
-  return { kind: 'single', food: drawFrom(pool, ctx), isStar: false }
+  if (landed.length === 0) return { kind: 'empty' }
+  return { kind: 'spin', foods: landed, isStar: false, isJackpot: checkJackpot(landed, settings) }
 }
 
 /** Default meal type suggested by the clock; the child can always override. */

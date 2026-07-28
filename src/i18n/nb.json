@@ -12,20 +12,14 @@
   "machine": {
     "spin": "SPINN",
     "spinning": "Spinner…",
-    "resultAnnouncement": "Maskinen valgte {{food}}!",
-    "comboAnnouncement": "Maskinen valgte {{foods}}!",
+    "resultAnnouncement": "Maskinen valgte {{foods}}!",
     "emptyTitle": "Ingen mat her ennå",
     "emptyBody": "Det finnes ingen matretter for dette måltidet ennå. En voksen kan legge til noen i innstillingene.",
-    "openSettings": "Åpne innstillinger"
-  },
-  "celebration": {
+    "openSettings": "Åpne innstillinger",
     "jackpot": "JACKPOT!",
-    "star": "SJELDEN MAT!",
-    "starPrompt": "Tør du prøve?",
-    "eat": "Vi spiser!",
-    "again": "Spinn igjen",
-    "logged": "Vel bekomme!",
-    "comboJoin": " + "
+    "starJackpot": "SJELDEN MAT!",
+    "eatAria": "Vi spiser {{food}}!",
+    "enjoy": "Vel bekomme!"
   },
   "nav": {
     "machine": "Spilleautomat",
@@ -40,7 +34,7 @@
     "eatenCount": "Spist {{count}} ganger",
     "eatenOnce": "Spist én gang",
     "locked": "Ikke smakt ennå",
-    "empty": "Spinn maskinen og velg «Vi spiser!» for å starte samlingen."
+    "empty": "Spinn maskinen og trykk på et resultat for å starte samlingen."
   },
   "pin": {
     "title": "Kun for voksne",
@@ -84,7 +78,7 @@
     "cancel": "Avbryt",
     "slotMode": "Maskintype",
     "slotModeSingle": "Én rett",
-    "slotModeSingleHint": "Alle tre hjulene lander på samme rett — hvert spinn er en jackpot.",
+    "slotModeSingleHint": "Hvert av de tre hjulene velger en rett fra samme liste.",
     "slotModeCombo": "Bygg et måltid",
     "slotModeComboHint": "Hjulene velger en base, et protein og noe ekstra som blir måltidet.",
     "starDrops": "Sjeldne stjernedrops",
@@ -117,7 +111,14 @@
     "importConfirm": "Importer",
     "importErrorNotJson": "Filen kunne ikke leses.",
     "importErrorNotNomnom": "Dette er ikke en sikkerhetskopi fra Nom Nom Gacha.",
-    "noFoodsForMeal": "Obs: ingen aktive matretter for {{meal}}."
+    "noFoodsForMeal": "Obs: ingen aktive matretter for {{meal}}.",
+    "jackpots": "Jackpotter",
+    "threeOfAKind": "Tre like",
+    "threeOfAKindHint": "Tre like matretter på gevinstlinjen er alltid jackpot.",
+    "jackpotCombos": "Egne kombinasjoner",
+    "jackpotCombosHint": "Et spinn som treffer en av disse mattrioene (uansett rekkefølge) er også jackpot.",
+    "addCombo": "Legg til kombinasjon",
+    "removeCombo": "Fjern kombinasjon"
   },
   "onboarding": {
     "welcomeTitle": "Velkommen!",

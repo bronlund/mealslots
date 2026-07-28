@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import type { Food, MealType } from '../../data/types'
 import { useAppStore } from '../../data/store'
@@ -7,7 +8,7 @@ import { eligibleFoods, mealTypeForClock, spin, type SpinResult } from '../../en
 import { buildReelStrip } from '../../engine/reelStrip'
 import { Reel, WINDOW } from './Reel'
 import { MealTypePicker } from './MealTypePicker'
-import { CelebrationOverlay } from './CelebrationOverlay'
+import { Fireworks } from './Fireworks'
 import { Panel } from '../../components/Panel'
 import { Button } from '../../components/Button'
 import { play, unlockAudio } from '../../audio/sound'
@@ -30,8 +31,12 @@ export function SlotMachine({ reducedMotion }: SlotMachineProps) {
   const [result, setResult] = useState<SpinResult | null>(null)
   const [strips, setStrips] = useState<Food[][]>([])
   const [skipped, setSkipped] = useState(false)
+  const [eatenIndex, setEatenIndex] = useState<number | null>(null)
+  const [burst, setBurst] = useState(0)
+  const [showBanner, setShowBanner] = useState(false)
   const landedCount = useRef(0)
   const tickTimer = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const pool = useMemo(() => eligibleFoods(foods, mealType, { star: false }), [foods, mealType])
 
@@ -41,7 +46,13 @@ export function SlotMachine({ reducedMotion }: SlotMachineProps) {
     return [0, 1, 2].map((i) => [pool[i % pool.length]])
   }, [pool])
 
-  useEffect(() => stopTicks, [])
+  useEffect(
+    () => () => {
+      stopTicks()
+      clearTimeout(bannerTimer.current)
+    },
+    [],
+  )
 
   function stopTicks() {
     clearInterval(tickTimer.current)
@@ -62,20 +73,18 @@ export function SlotMachine({ reducedMotion }: SlotMachineProps) {
     })
     if (spinResult.kind === 'empty') return
 
-    const landing =
-      spinResult.kind === 'single'
-        ? [spinResult.food, spinResult.food, spinResult.food]
-        : spinResult.foods
     // Star foods only appear at the very end of the scroll — the pool that
     // streaks past is the everyday one, which makes the landing the surprise.
-    const stripPool = pool.length > 0 ? pool : landing
+    const stripPool = pool.length > 0 ? pool : spinResult.foods
     setStrips(
-      landing.map((food, i) =>
+      spinResult.foods.map((food, i) =>
         buildReelStrip(food, stripPool, state.rng, reducedMotion ? 3 : 14 + i * 5),
       ),
     )
     setResult(spinResult)
     setSkipped(false)
+    setEatenIndex(null)
+    setShowBanner(false)
     landedCount.current = 0
     setPhase('spinning')
     haptic.tap()
@@ -89,44 +98,48 @@ export function SlotMachine({ reducedMotion }: SlotMachineProps) {
     landedCount.current += 1
     play('thunk')
     haptic.land()
-    const total = strips.length
-    if (landedCount.current >= total) {
+    if (landedCount.current >= strips.length) {
       stopTicks()
-      setTimeout(() => setPhase('result'), reducedMotion ? 80 : 300)
+      setTimeout(() => setPhase('result'), reducedMotion ? 60 : 250)
     }
   }
 
-  function closeOverlay() {
-    setPhase('idle')
-    setResult(null)
-  }
+  // Celebrate in place the moment the result phase begins.
+  useEffect(() => {
+    if (phase !== 'result' || result == null || result.kind !== 'spin') return
+    if (result.isJackpot) {
+      setBurst((b) => b + 1)
+      setShowBanner(true)
+      play(result.isStar ? 'star' : 'fanfare')
+      if (result.isStar) play('fanfare')
+      haptic.jackpot()
+      clearTimeout(bannerTimer.current)
+      bannerTimer.current = setTimeout(() => setShowBanner(false), 2400)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
 
-  function handleEat() {
-    if (result != null) confirmMeal(result, mealType)
-    closeOverlay()
-  }
-
-  function handleAgain() {
-    closeOverlay()
-    // Let the overlay exit before the reels take off again.
-    setTimeout(doSpin, 120)
+  function handleEat(food: Food, index: number) {
+    if (result == null || result.kind !== 'spin' || eatenIndex != null) return
+    confirmMeal([food.id], mealType, result.isStar)
+    setEatenIndex(index)
+    play('success')
+    haptic.tap()
   }
 
   const durations = reducedMotion ? [0.3, 0.3, 0.3] : [1.55, 2.0, 2.45]
   const spinning = phase === 'spinning'
   const shownStrips = spinning || phase === 'result' ? strips : idleStrips
-  const resultFoods =
-    result == null || result.kind === 'empty'
-      ? []
-      : result.kind === 'single'
-        ? [result.food]
-        : result.foods
+  const resultFoods = phase === 'result' && result?.kind === 'spin' ? result.foods : []
+  const isStar = result?.kind === 'spin' && result.isStar
+  const isJackpot = result?.kind === 'spin' && result.isJackpot
 
   return (
     <div className="flex flex-col items-center gap-5">
       <MealTypePicker value={mealType} onChange={setMealType} disabled={spinning} />
 
       <Panel className="w-full max-w-sm px-4 pt-5 pb-6">
+        <Fireworks burst={burst} golden={isStar} reducedMotion={reducedMotion} />
         <h1 className="mb-4 text-center font-display text-2xl font-bold tracking-wider text-gold-deep">
           {t('app.name')}
         </h1>
@@ -165,9 +178,75 @@ export function SlotMachine({ reducedMotion }: SlotMachineProps) {
               <span aria-hidden="true" className="absolute top-1/2 -right-1 -translate-y-1/2 text-gold-deep">
                 ◀
               </span>
+              {/* In-place jackpot banner: no buttons, auto-dismisses. */}
+              <AnimatePresence>
+                {showBanner && (
+                  <motion.div
+                    className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: [0.5, 1.15, 1] }}
+                    exit={{ opacity: 0, scale: 1.2 }}
+                    transition={{ duration: 0.45 }}
+                    data-testid="jackpot-banner"
+                  >
+                    <span
+                      className={`rounded-2xl border-3 px-5 py-2 font-display text-3xl font-bold tracking-widest shadow-glow ${
+                        isStar
+                          ? 'border-star bg-surface text-gold-deep'
+                          : 'border-gold-deep bg-surface text-accent-deep'
+                      }`}
+                    >
+                      {isStar ? `⭐ ${t('machine.starJackpot')}` : t('machine.jackpot')}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            <div className="mt-6 flex justify-center">
+            {/* Result labels: the playing area between the wheels and the
+                button holds three lines; tap a line to choose that food. */}
+            <div
+              className="mt-4 flex min-h-28 flex-col items-center justify-center gap-1"
+              data-testid="result-area"
+            >
+              {resultFoods.length > 0 ? (
+                resultFoods.map((food, i) => {
+                  const eaten = eatenIndex === i
+                  const dimmed = eatenIndex != null && !eaten
+                  return (
+                    <button
+                      key={`${i}-${food.id}`}
+                      data-testid="result-line"
+                      aria-label={t('machine.eatAria', { food: food.name })}
+                      disabled={eatenIndex != null}
+                      onClick={() => handleEat(food, i)}
+                      className={`min-h-8 rounded-lg px-3 font-display text-xl font-bold transition-all ${
+                        eaten
+                          ? 'text-success'
+                          : dimmed
+                            ? 'text-ink-soft opacity-40'
+                            : isJackpot
+                              ? 'text-gold-deep'
+                              : 'text-ink'
+                      }`}
+                    >
+                      {eaten ? `✓ ${food.name}` : food.name}
+                    </button>
+                  )
+                })
+              ) : (
+                <p className="px-4 text-center font-body text-sm text-ink-soft">
+                  {spinning ? '' : t('app.tagline')}
+                </p>
+              )}
+              {eatenIndex != null && (
+                <p className="font-body text-sm font-bold text-success" data-testid="enjoy">
+                  {t('machine.enjoy')} 🎉
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4 flex justify-center">
               <button
                 onClick={doSpin}
                 disabled={spinning}
@@ -185,18 +264,11 @@ export function SlotMachine({ reducedMotion }: SlotMachineProps) {
       {/* Screen-reader announcement of the outcome. */}
       <div aria-live="polite" className="sr-only">
         {phase === 'result' && resultFoods.length > 0
-          ? t(resultFoods.length > 1 ? 'machine.comboAnnouncement' : 'machine.resultAnnouncement', {
-              food: resultFoods[0]?.name,
+          ? `${isJackpot ? `${t('machine.jackpot')} ` : ''}${t('machine.resultAnnouncement', {
               foods: resultFoods.map((f) => f.name).join(', '),
-            })
+            })}${eatenIndex != null ? ` ${t('machine.enjoy')}` : ''}`
           : ''}
       </div>
-
-      <CelebrationOverlay
-        result={phase === 'result' && result != null && result.kind !== 'empty' ? result : null}
-        onEat={handleEat}
-        onAgain={handleAgain}
-      />
     </div>
   )
 }

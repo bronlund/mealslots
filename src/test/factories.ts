@@ -30,6 +30,8 @@ export function makeLogEntry(overrides: Partial<MealLogEntry> = {}): MealLogEntr
 export function engineSettings(overrides: Partial<EngineSettings> = {}): EngineSettings {
   return {
     slotMode: 'single',
+    jackpotThreeOfAKind: true,
+    jackpotCombos: [],
     starDropsEnabled: false,
     starChance: 0.05,
     antiRepeatHours: 36,

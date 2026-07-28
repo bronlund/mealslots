@@ -180,6 +180,78 @@ function MachineSection() {
       </fieldset>
 
       <fieldset>
+        <legend className="mb-1 font-body text-base font-bold text-ink">🎆 {t('settings.jackpots')}</legend>
+        <label className="flex items-center justify-between gap-2 font-body text-sm font-semibold text-ink">
+          {t('settings.threeOfAKind')}
+          <input
+            type="checkbox"
+            checked={settings.jackpotThreeOfAKind}
+            onChange={(e) => updateSettings({ jackpotThreeOfAKind: e.target.checked })}
+            className="h-6 w-6 accent-(--nn-accent)"
+            data-testid="jackpot-threeofakind"
+          />
+        </label>
+        <p className="mt-1 font-body text-xs text-ink-soft">{t('settings.threeOfAKindHint')}</p>
+
+        <p className="mt-3 font-body text-sm font-semibold text-ink">{t('settings.jackpotCombos')}</p>
+        <p className="font-body text-xs text-ink-soft">{t('settings.jackpotCombosHint')}</p>
+        <div className="mt-2 flex flex-col gap-2">
+          {settings.jackpotCombos.map((combo, comboIndex) => (
+            <div key={comboIndex} className="flex items-center gap-1.5" data-testid="jackpot-combo">
+              {[0, 1, 2].map((slot) => (
+                <select
+                  key={slot}
+                  value={combo[slot] ?? ''}
+                  aria-label={`${t('settings.jackpotCombos')} ${comboIndex + 1} — ${slot + 1}`}
+                  onChange={(e) => {
+                    const next = settings.jackpotCombos.map((c, i) =>
+                      i === comboIndex
+                        ? [...c.slice(0, slot), e.target.value, ...c.slice(slot + 1)]
+                        : c,
+                    )
+                    updateSettings({ jackpotCombos: next })
+                  }}
+                  className="min-h-11 w-0 flex-1 rounded-lg border-2 border-gold bg-surface px-1 font-body text-sm text-ink"
+                >
+                  {foods.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              ))}
+              <button
+                onClick={() =>
+                  updateSettings({
+                    jackpotCombos: settings.jackpotCombos.filter((_, i) => i !== comboIndex),
+                  })
+                }
+                aria-label={t('settings.removeCombo')}
+                className="min-h-11 px-1.5 font-bold text-danger"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          {foods.length > 0 && (
+            <Button
+              onClick={() =>
+                updateSettings({
+                  jackpotCombos: [
+                    ...settings.jackpotCombos,
+                    [foods[0].id, foods[0].id, foods[0].id],
+                  ],
+                })
+              }
+              data-testid="add-combo"
+            >
+              + {t('settings.addCombo')}
+            </Button>
+          )}
+        </div>
+      </fieldset>
+
+      <fieldset>
         <label className="flex items-center justify-between gap-2 font-body text-base font-bold text-ink">
           ⭐ {t('settings.starDrops')}
           <input

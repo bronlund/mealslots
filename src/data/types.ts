@@ -43,6 +43,10 @@ export interface MealLogEntry {
 
 export interface Settings {
   slotMode: SlotMode
+  /** Three matching foods on the payline is a jackpot. */
+  jackpotThreeOfAKind: boolean
+  /** Parent-defined food trios (by id) that count as a jackpot in any order. */
+  jackpotCombos: string[][]
   starDropsEnabled: boolean
   /** Probability that a spin is a star drop, 0.01–0.15. */
   starChance: number
@@ -67,6 +71,8 @@ export interface PersistedState {
 
 export const DEFAULT_SETTINGS: Settings = {
   slotMode: 'single',
+  jackpotThreeOfAKind: true,
+  jackpotCombos: [],
   starDropsEnabled: false,
   starChance: 0.05,
   antiRepeatHours: 36,

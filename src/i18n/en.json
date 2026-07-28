@@ -12,20 +12,14 @@
   "machine": {
     "spin": "SPIN",
     "spinning": "Spinning…",
-    "resultAnnouncement": "The machine picked {{food}}!",
-    "comboAnnouncement": "The machine picked {{foods}}!",
+    "resultAnnouncement": "The machine picked {{foods}}!",
     "emptyTitle": "No foods here yet",
     "emptyBody": "There are no foods for this meal yet. A grown-up can add some in the settings.",
-    "openSettings": "Open settings"
-  },
-  "celebration": {
+    "openSettings": "Open settings",
     "jackpot": "JACKPOT!",
-    "star": "RARE FOOD!",
-    "starPrompt": "Feeling brave?",
-    "eat": "Let's eat!",
-    "again": "Spin again",
-    "logged": "Enjoy your meal!",
-    "comboJoin": " + "
+    "starJackpot": "RARE FOOD!",
+    "eatAria": "Let's eat {{food}}!",
+    "enjoy": "Enjoy your meal!"
   },
   "nav": {
     "machine": "Slot machine",
@@ -40,7 +34,7 @@
     "eatenCount": "Eaten {{count}} times",
     "eatenOnce": "Eaten once",
     "locked": "Not tasted yet",
-    "empty": "Spin the machine and choose \"Let's eat!\" to start your collection."
+    "empty": "Spin the machine and tap a result to start your collection."
   },
   "pin": {
     "title": "Grown-ups only",
@@ -84,7 +78,7 @@
     "cancel": "Cancel",
     "slotMode": "Machine type",
     "slotModeSingle": "One dish",
-    "slotModeSingleHint": "All three reels land on the same dish — every spin is a jackpot.",
+    "slotModeSingleHint": "Each of the three reels picks a dish from the same list.",
     "slotModeCombo": "Build a meal",
     "slotModeComboHint": "The reels pick a base, a protein and an extra that make up the meal.",
     "starDrops": "Rare star drops",
@@ -117,7 +111,14 @@
     "importConfirm": "Import",
     "importErrorNotJson": "That file could not be read.",
     "importErrorNotNomnom": "That is not a Nom Nom Gacha backup file.",
-    "noFoodsForMeal": "Heads up: no enabled foods for {{meal}}."
+    "noFoodsForMeal": "Heads up: no enabled foods for {{meal}}.",
+    "jackpots": "Jackpots",
+    "threeOfAKind": "Three of a kind",
+    "threeOfAKindHint": "Three matching foods on the payline is always a jackpot.",
+    "jackpotCombos": "Custom combinations",
+    "jackpotCombosHint": "A spin matching one of these food trios (in any order) also counts as a jackpot.",
+    "addCombo": "Add combination",
+    "removeCombo": "Remove combination"
   },
   "onboarding": {
     "welcomeTitle": "Welcome!",

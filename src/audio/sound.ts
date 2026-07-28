@@ -4,7 +4,7 @@
  * The context is created lazily on the first user gesture (autoplay policy).
  */
 
-export type SoundName = 'tap' | 'tick' | 'thunk' | 'jingle' | 'star' | 'success'
+export type SoundName = 'tap' | 'tick' | 'thunk' | 'jingle' | 'star' | 'success' | 'fanfare'
 
 let ctx: AudioContext | null = null
 let muted = false
@@ -84,6 +84,31 @@ const SOUNDS: Record<SoundName, (audio: AudioContext) => void> = {
   success: (a) => {
     tone(a, { freq: 659.25, type: 'triangle', duration: 0.12, volume: 0.15 })
     tone(a, { freq: 987.77, type: 'triangle', at: 0.1, duration: 0.25, volume: 0.15 })
+  },
+
+  fanfare: (a) => {
+    // Triumphant brass-style fanfare for jackpots: rising call, answer, and a
+    // held final chord over a walking bass.
+    const call = [
+      [523.25, 0],
+      [659.25, 0.13],
+      [783.99, 0.26],
+      [1046.5, 0.39],
+    ] as const
+    call.forEach(([freq, at]) =>
+      tone(a, { freq, type: 'square', at, duration: 0.24, volume: 0.08 }),
+    )
+    tone(a, { freq: 783.99, type: 'square', at: 0.62, duration: 0.16, volume: 0.08 })
+    tone(a, { freq: 880, type: 'square', at: 0.8, duration: 0.16, volume: 0.08 })
+    // Final chord (C major with high sparkle)
+    tone(a, { freq: 1046.5, type: 'square', at: 1.0, duration: 0.9, volume: 0.1 })
+    tone(a, { freq: 1318.51, type: 'triangle', at: 1.0, duration: 0.9, volume: 0.08 })
+    tone(a, { freq: 1568, type: 'sine', at: 1.05, duration: 0.9, volume: 0.05 })
+    tone(a, { freq: 2093, type: 'sine', at: 1.2, duration: 0.8, volume: 0.04 })
+    // Bass
+    tone(a, { freq: 130.81, type: 'triangle', at: 0, duration: 0.5, volume: 0.16 })
+    tone(a, { freq: 196, type: 'triangle', at: 0.5, duration: 0.45, volume: 0.16 })
+    tone(a, { freq: 261.63, type: 'triangle', at: 1.0, duration: 0.9, volume: 0.16 })
   },
 }
 

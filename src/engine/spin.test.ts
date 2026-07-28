@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { effectiveWeight, mealTypeForClock, spin, type SpinContext } from './spin'
+import {
+  checkJackpot,
+  effectiveWeight,
+  mealTypeForClock,
+  spin,
+  type SpinContext,
+} from './spin'
 import { buildReelStrip } from './reelStrip'
 import { seededRng } from './rng'
 import { engineSettings, makeFood, makeLogEntry } from '../test/factories'
@@ -19,12 +25,16 @@ function ctx(overrides: Partial<SpinContext> = {}): SpinContext {
   }
 }
 
+/** Tallies every landed reel across n spins (draws are independent, so each
+ *  reel follows the same distribution). */
 function drawMany(context: SpinContext, n: number): Map<string, number> {
   const counts = new Map<string, number>()
   for (let i = 0; i < n; i++) {
     const result = spin(context)
-    if (result.kind === 'single') {
-      counts.set(result.food.name, (counts.get(result.food.name) ?? 0) + 1)
+    if (result.kind === 'spin') {
+      for (const food of result.foods) {
+        counts.set(food.name, (counts.get(food.name) ?? 0) + 1)
+      }
     }
   }
   return counts
@@ -40,10 +50,16 @@ describe('spin — pools and filtering', () => {
     expect(spin(ctx({ foods }))).toEqual({ kind: 'empty' })
   })
 
-  it('a single-food pool always wins', () => {
+  it('lands three reels, all drawn from the pool', () => {
     const only = makeFood({ name: 'Soup' })
     const result = spin(ctx({ foods: [only] }))
-    expect(result).toEqual({ kind: 'single', food: only, isStar: false })
+    expect(result.kind).toBe('spin')
+    if (result.kind === 'spin') {
+      expect(result.foods).toHaveLength(3)
+      expect(result.foods.every((f) => f.id === only.id)).toBe(true)
+      // A single-food pool is always three of a kind.
+      expect(result.isJackpot).toBe(true)
+    }
   })
 
   it('never picks disabled foods or foods from other meal types', () => {
@@ -56,7 +72,21 @@ describe('spin — pools and filtering', () => {
     const counts = drawMany(ctx({ foods }), 500)
     expect(counts.has('Off')).toBe(false)
     expect(counts.has('Breakfast')).toBe(false)
-    expect((counts.get('Dinner A') ?? 0) + (counts.get('Dinner B') ?? 0)).toBe(500)
+    expect((counts.get('Dinner A') ?? 0) + (counts.get('Dinner B') ?? 0)).toBe(1500)
+  })
+
+  it('reels are independent — matching trios are possible but not guaranteed', () => {
+    const foods = [makeFood({ name: 'A' }), makeFood({ name: 'B' })]
+    let jackpots = 0
+    const n = 2000
+    const context = ctx({ foods })
+    for (let i = 0; i < n; i++) {
+      const result = spin(context)
+      if (result.kind === 'spin' && result.isJackpot) jackpots++
+    }
+    // Uniform two-food pool: P(three of a kind) = 2 × (1/2)³ = 0.25.
+    expect(jackpots / n).toBeGreaterThan(0.18)
+    expect(jackpots / n).toBeLessThan(0.32)
   })
 })
 
@@ -67,12 +97,11 @@ describe('spin — weighting', () => {
       makeFood({ name: 'Normal', weight: 'normal' }),
       makeFood({ name: 'More', weight: 'more' }),
     ]
-    const n = 10_000
+    const n = 5_000 // 15 000 draws across three reels
     const counts = drawMany(ctx({ foods, settings: engineSettings({ antiRepeatHours: 0 }) }), n)
-    // Expected proportions: 0.5/3.5, 1/3.5, 2/3.5
-    expect(counts.get('Less')! / n).toBeCloseTo(0.5 / 3.5, 1)
-    expect(counts.get('Normal')! / n).toBeCloseTo(1 / 3.5, 1)
-    expect(counts.get('More')! / n).toBeCloseTo(2 / 3.5, 1)
+    expect(counts.get('Less')! / (3 * n)).toBeCloseTo(0.5 / 3.5, 1)
+    expect(counts.get('Normal')! / (3 * n)).toBeCloseTo(1 / 3.5, 1)
+    expect(counts.get('More')! / (3 * n)).toBeCloseTo(2 / 3.5, 1)
   })
 
   it('anti-repeat lowers but never zeroes odds of recently eaten foods', () => {
@@ -82,9 +111,9 @@ describe('spin — weighting', () => {
     expect(effectiveWeight(pasta, log, 36, NOW)).toBeCloseTo(0.25)
     expect(effectiveWeight(rice, log, 36, NOW)).toBe(1)
 
-    const n = 10_000
+    const n = 5_000
     const counts = drawMany(ctx({ foods: [pasta, rice], log }), n)
-    expect(counts.get('Pasta')! / n).toBeCloseTo(0.25 / 1.25, 1)
+    expect(counts.get('Pasta')! / (3 * n)).toBeCloseTo(0.25 / 1.25, 1)
     expect(counts.get('Pasta')!).toBeGreaterThan(0)
   })
 
@@ -95,6 +124,37 @@ describe('spin — weighting', () => {
 
     const recent = [makeLogEntry({ foodIds: [pasta.id], at: '2026-07-28T08:00:00.000Z' })]
     expect(effectiveWeight(pasta, recent, 0, NOW)).toBe(1)
+  })
+})
+
+describe('checkJackpot', () => {
+  const a = makeFood({ name: 'A' })
+  const b = makeFood({ name: 'B' })
+  const c = makeFood({ name: 'C' })
+
+  it('three of a kind wins when enabled, not when disabled', () => {
+    const settings = { jackpotThreeOfAKind: true, jackpotCombos: [] }
+    expect(checkJackpot([a, a, a], settings)).toBe(true)
+    expect(checkJackpot([a, a, b], settings)).toBe(false)
+    expect(checkJackpot([a, a, a], { ...settings, jackpotThreeOfAKind: false })).toBe(false)
+  })
+
+  it('custom combinations match in any reel order', () => {
+    const settings = { jackpotThreeOfAKind: false, jackpotCombos: [[a.id, b.id, c.id]] }
+    expect(checkJackpot([c, a, b], settings)).toBe(true)
+    expect(checkJackpot([a, b, b], settings)).toBe(false)
+  })
+
+  it('combinations with repeats need matching multiplicity', () => {
+    const settings = { jackpotThreeOfAKind: false, jackpotCombos: [[a.id, a.id, b.id]] }
+    expect(checkJackpot([a, b, a], settings)).toBe(true)
+    expect(checkJackpot([a, b, b], settings)).toBe(false)
+    expect(checkJackpot([a, b, c], settings)).toBe(false)
+  })
+
+  it('combo length must match the reel count', () => {
+    const settings = { jackpotThreeOfAKind: false, jackpotCombos: [[a.id, b.id, c.id]] }
+    expect(checkJackpot([a, b], settings)).toBe(false)
   })
 })
 
@@ -117,26 +177,30 @@ describe('spin — star drops', () => {
 
   it('drops stars at roughly the configured probability', () => {
     const n = 10_000
-    const counts = drawMany(
-      ctx({
-        foods: starSetup(),
-        settings: engineSettings({ starDropsEnabled: true, starChance: 0.1 }),
-      }),
-      n,
-    )
-    expect(counts.get('Star')! / n).toBeCloseTo(0.1, 1)
-  })
-
-  it('star results carry the isStar flag', () => {
+    let stars = 0
     const context = ctx({
       foods: starSetup(),
-      settings: engineSettings({ starDropsEnabled: true, starChance: 1 }),
+      settings: engineSettings({ starDropsEnabled: true, starChance: 0.1 }),
     })
-    const result = spin(context)
-    expect(result.kind).toBe('single')
-    if (result.kind === 'single') {
+    for (let i = 0; i < n; i++) {
+      const result = spin(context)
+      if (result.kind === 'spin' && result.isStar) stars++
+    }
+    expect(stars / n).toBeCloseTo(0.1, 1)
+  })
+
+  it('a star drop fills every reel and is a golden jackpot', () => {
+    const result = spin(
+      ctx({
+        foods: starSetup(),
+        settings: engineSettings({ starDropsEnabled: true, starChance: 1 }),
+      }),
+    )
+    expect(result.kind).toBe('spin')
+    if (result.kind === 'spin') {
       expect(result.isStar).toBe(true)
-      expect(result.food.name).toBe('Star')
+      expect(result.isJackpot).toBe(true)
+      expect(result.foods.map((f) => f.name)).toEqual(['Star', 'Star', 'Star'])
     }
   })
 
@@ -148,8 +212,8 @@ describe('spin — star drops', () => {
     const result = spin(
       ctx({ foods, settings: engineSettings({ starDropsEnabled: true, starChance: 1 }) }),
     )
-    expect(result.kind).toBe('single')
-    if (result.kind === 'single') expect(result.food.name).toBe('Safe')
+    expect(result.kind).toBe('spin')
+    if (result.kind === 'spin') expect(result.foods[0].name).toBe('Safe')
   })
 })
 
@@ -162,23 +226,39 @@ describe('spin — combo mode', () => {
       makeFood({ name: 'Uncategorized' }),
     ]
     const result = spin(ctx({ foods, settings: engineSettings({ slotMode: 'combo' }) }))
-    expect(result.kind).toBe('combo')
-    if (result.kind === 'combo') {
+    expect(result.kind).toBe('spin')
+    if (result.kind === 'spin') {
       expect(result.foods.map((f) => f.name)).toEqual(['Pasta', 'Meatballs', 'Broccoli'])
+      expect(result.isJackpot).toBe(false)
     }
   })
 
-  it('skips empty categories and degrades to single with only one pool', () => {
-    const foods = [makeFood({ name: 'Pasta', comboCategory: 'base' })]
-    const result = spin(ctx({ foods, settings: engineSettings({ slotMode: 'combo' }) }))
-    expect(result).toMatchObject({ kind: 'single', food: { name: 'Pasta' } })
+  it('a custom combination can make a combo spin a jackpot', () => {
+    const pasta = makeFood({ name: 'Pasta', comboCategory: 'base' })
+    const meatballs = makeFood({ name: 'Meatballs', comboCategory: 'protein' })
+    const broccoli = makeFood({ name: 'Broccoli', comboCategory: 'extra' })
+    const result = spin(
+      ctx({
+        foods: [pasta, meatballs, broccoli],
+        settings: engineSettings({
+          slotMode: 'combo',
+          jackpotCombos: [[broccoli.id, pasta.id, meatballs.id]],
+        }),
+      }),
+    )
+    expect(result).toMatchObject({ kind: 'spin', isJackpot: true })
   })
 
-  it('returns empty in combo mode when nothing is categorized', () => {
-    const foods = [makeFood({ name: 'Loose' })]
-    expect(spin(ctx({ foods, settings: engineSettings({ slotMode: 'combo' }) }))).toEqual({
-      kind: 'empty',
-    })
+  it('skips empty categories and returns empty when nothing is categorized', () => {
+    const solo = makeFood({ name: 'Pasta', comboCategory: 'base' })
+    const result = spin(ctx({ foods: [solo], settings: engineSettings({ slotMode: 'combo' }) }))
+    expect(result.kind).toBe('spin')
+    if (result.kind === 'spin') expect(result.foods).toHaveLength(1)
+
+    const loose = makeFood({ name: 'Loose' })
+    expect(spin(ctx({ foods: [loose], settings: engineSettings({ slotMode: 'combo' }) }))).toEqual(
+      { kind: 'empty' },
+    )
   })
 })
 
@@ -188,7 +268,6 @@ describe('buildReelStrip', () => {
     const strip = buildReelStrip(foods[0], foods, seededRng(7), 18)
     expect(strip).toHaveLength(18)
     expect(strip[strip.length - 1]).toBe(foods[0])
-    // The result should not appear immediately before itself at the end.
     expect(strip[strip.length - 2].id).not.toBe(foods[0].id)
   })
 

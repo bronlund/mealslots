@@ -406,3 +406,14 @@ One complete build, sequenced so that risk retires early (art style and reel fee
 ---
 
 *Plan agreed via structured interview on 2026-07-28. Next step: Step 0 — scaffold the project.*
+
+---
+
+## Revision 2026-07-28 — spin mechanic rework (post-review)
+
+After playing the first build, the design changed from "every spin is a jackpot" to a real slot mechanic:
+
+- The three reels land **independently** — matching is possible, never guaranteed.
+- The result shows as **three tappable text lines** between the reel window and the SPIN button (no celebration modal). Tapping a line logs that food to history and the collection book.
+- **Jackpots are parent-defined** in settings: "three of a kind" (on by default) plus custom food-trio combinations, matched in any reel order.
+- A jackpot plays an in-place **fireworks animation and fanfare** over the playing area; star drops fill all reels with the challenge food and celebrate in gold.

@@ -28,14 +28,16 @@ test.describe('spinning', () => {
     await completeOnboarding(page)
   })
 
-  test('spin → celebrate → eat → collection credit', async ({ page }) => {
+  test('spin → result lines → tap to eat → collection credit', async ({ page }) => {
     await page.getByTestId('spin').click()
-    await expect(page.getByTestId('result-name')).toBeVisible({ timeout: 10_000 })
-    const name = (await page.getByTestId('result-name').textContent())!.trim()
+    await expect(page.getByTestId('result-line')).toHaveCount(3, { timeout: 10_000 })
+    const firstLine = page.getByTestId('result-line').first()
+    const name = (await firstLine.textContent())!.trim()
     expect(name.length).toBeGreaterThan(0)
 
-    await page.getByRole('button', { name: "Let's eat!" }).click()
-    await expect(page.getByTestId('result-name')).toBeHidden({ timeout: 5_000 })
+    await firstLine.click()
+    await expect(firstLine).toContainText('✓')
+    await expect(page.getByTestId('enjoy')).toBeVisible()
 
     await page.getByTestId('nav-collection').click()
     const unlocked = page.locator('[data-testid="collection-card"][data-unlocked="true"]')
@@ -43,14 +45,14 @@ test.describe('spinning', () => {
     await expect(unlocked).toContainText(name)
   })
 
-  test('spin again respins without logging', async ({ page }) => {
+  test('spinning again replaces the result without logging', async ({ page }) => {
     await page.getByTestId('spin').click()
-    await expect(page.getByTestId('result-name')).toBeVisible({ timeout: 10_000 })
-    await page.getByRole('button', { name: 'Spin again' }).click()
-    await expect(page.getByTestId('result-name')).toBeHidden({ timeout: 5_000 })
-    await expect(page.getByTestId('result-name')).toBeVisible({ timeout: 10_000 })
-    await page.getByRole('button', { name: "Let's eat!" }).click()
-    await expect(page.getByTestId('result-name')).toBeHidden({ timeout: 5_000 })
+    await expect(page.getByTestId('result-line')).toHaveCount(3, { timeout: 10_000 })
+    // No modal to dismiss — the spin button itself is the "spin again".
+    await page.getByTestId('spin').click()
+    await expect(page.getByTestId('result-line')).toHaveCount(0)
+    await expect(page.getByTestId('result-line')).toHaveCount(3, { timeout: 10_000 })
+    await page.getByTestId('result-line').first().click()
     await page.getByTestId('nav-collection').click()
     await expect(
       page.locator('[data-testid="collection-card"][data-unlocked="true"]'),
@@ -61,9 +63,11 @@ test.describe('spinning', () => {
     // Breakfast-only foods must never land on a dinner spin.
     await page.getByTestId('meal-dinner').click()
     await page.getByTestId('spin').click()
-    await expect(page.getByTestId('result-name')).toBeVisible({ timeout: 10_000 })
-    const name = (await page.getByTestId('result-name').textContent())!.trim()
-    expect(['Yogurt', 'Oatmeal', 'Toast']).not.toContain(name)
+    await expect(page.getByTestId('result-line')).toHaveCount(3, { timeout: 10_000 })
+    for (const line of await page.getByTestId('result-line').all()) {
+      const name = (await line.textContent())!.trim()
+      expect(['Yogurt', 'Oatmeal', 'Toast']).not.toContain(name)
+    }
   })
 
   test('machine screen is accessible', async ({ page }) => {
@@ -98,18 +102,63 @@ test.describe('star drops', () => {
     let sawStar = false
     for (let i = 0; i < 30 && !sawStar; i++) {
       await page.getByTestId('spin').click()
-      await expect(page.getByTestId('result-name')).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByTestId('result-line')).toHaveCount(3, { timeout: 10_000 })
       sawStar = await page
         .getByText(/RARE FOOD!/)
         .isVisible()
         .catch(() => false)
-      if (!sawStar) {
-        await page.getByRole('button', { name: 'Spin again' }).click()
-        await expect(page.getByTestId('result-name')).toBeHidden({ timeout: 5_000 })
-      }
     }
     expect(sawStar).toBe(true)
-    await expect(page.getByTestId('result-name')).toHaveText('Pizza')
+    // A star drop fills every reel with the challenge food.
+    for (const line of await page.getByTestId('result-line').all()) {
+      await expect(line).toHaveText('Pizza')
+    }
+  })
+})
+
+test.describe('jackpots', () => {
+  test('three of a kind fires the in-place fireworks banner, no popup', async ({ page }) => {
+    await page.goto(appUrl())
+    await completeOnboarding(page)
+
+    // Leave only one breakfast food enabled → every reel lands on it.
+    await page.getByTestId('nav-settings').click()
+    await enterPin(page)
+    for (const iconId of ['porridge', 'oatmeal', 'bread', 'yogurt']) {
+      await page.getByTestId(`food-row-${iconId}`).click()
+      await page.getByRole('checkbox', { name: 'In the machine' }).uncheck()
+      await page.getByTestId('save-food').click()
+    }
+    await page.getByTestId('back').click()
+
+    await page.getByTestId('meal-breakfast').click()
+    await page.getByTestId('spin').click()
+    await expect(page.getByTestId('jackpot-banner')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('jackpot-banner')).toContainText('JACKPOT!')
+    // The celebration happens in the playing area — no dialog appears...
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    // ...the result lines all show the food, and the banner auto-dismisses.
+    for (const line of await page.getByTestId('result-line').all()) {
+      await expect(line).toHaveText('Toast')
+    }
+    await expect(page.getByTestId('jackpot-banner')).toBeHidden({ timeout: 5_000 })
+  })
+
+  test('a custom combination can be added in settings', async ({ page }) => {
+    await page.goto(appUrl())
+    await completeOnboarding(page)
+    await page.getByTestId('nav-settings').click()
+    await enterPin(page)
+    await page.getByTestId('section-machine').click()
+    await expect(page.getByTestId('jackpot-threeofakind')).toBeChecked()
+    await page.getByTestId('add-combo').click()
+    await expect(page.getByTestId('jackpot-combo')).toHaveCount(1)
+    // The combination survives a reload.
+    await page.reload()
+    await page.getByTestId('nav-settings').click()
+    await enterPin(page)
+    await page.getByTestId('section-machine').click()
+    await expect(page.getByTestId('jackpot-combo')).toHaveCount(1)
   })
 })
 
@@ -218,7 +267,7 @@ test.describe('offline PWA', () => {
     await page.reload()
     await expect(page.getByTestId('spin')).toBeVisible({ timeout: 15_000 })
     await page.getByTestId('spin').click()
-    await expect(page.getByTestId('result-name')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('result-line')).toHaveCount(3, { timeout: 10_000 })
     await context.setOffline(false)
   })
 })
