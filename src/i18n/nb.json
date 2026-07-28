@@ -105,9 +105,8 @@
     "clearHistoryConfirm": "Slette hele måltidshistorikken? Samleboka bygges av den.",
     "starBadge": "Stjernemat",
     "export": "Eksporter sikkerhetskopi",
-    "exportHint": "Lagrer mat, innstillinger og historikk som en fil. PIN-koden blir aldri med.",
+    "exportHint": "Lagrer mat, innstillinger og historikk som en fil for denne familien. PIN-koden blir aldri med.",
     "import": "Importer sikkerhetskopi",
-    "importPreview": "Denne filen inneholder {{foods}} matretter og {{log}} loggede måltider. Erstatte det som er på denne enheten?",
     "importConfirm": "Importer",
     "importErrorNotJson": "Filen kunne ikke leses.",
     "importErrorNotNomnom": "Dette er ikke en sikkerhetskopi fra Nom Nom Gacha.",
@@ -118,7 +117,11 @@
     "jackpotCombos": "Egne kombinasjoner",
     "jackpotCombosHint": "Et spinn som treffer en av disse mattrioene (uansett rekkefølge) er også jackpot.",
     "addCombo": "Legg til kombinasjon",
-    "removeCombo": "Fjern kombinasjon"
+    "removeCombo": "Fjern kombinasjon",
+    "exportSetup": "Del oppsett",
+    "exportSetupHint": "Lagrer bare matlisten og maskininnstillingene — uten historikk og PIN. Perfekt å sende til en annen enhet eller familie.",
+    "importPreviewBackup": "Denne sikkerhetskopien inneholder {{foods}} matretter og {{log}} loggede måltider. Erstatte alt på denne enheten?",
+    "importPreviewSetup": "Dette oppsettet inneholder {{foods}} matretter og {{combos}} jackpot-kombinasjoner. Erstatte matrettene og maskininnstillingene på denne enheten? Historikk, appinnstillinger og PIN beholdes."
   },
   "onboarding": {
     "welcomeTitle": "Velkommen!",

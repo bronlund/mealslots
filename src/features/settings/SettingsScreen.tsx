@@ -4,7 +4,7 @@ import type { Food, Language, MealType, ThemeChoice } from '../../data/types'
 import { MEAL_TYPES } from '../../data/types'
 import { useAppStore, persistNow } from '../../data/store'
 import { eligibleFoods } from '../../engine/spin'
-import { exportState, parseImport, type ImportPreview } from '../../data/exportImport'
+import { exportSetup, exportState, parseImport, type ImportPreview } from '../../data/exportImport'
 import { hashPin, makeSalt } from '../../data/pin'
 import { FoodIconSvg } from '../../icons/foods'
 import { Panel } from '../../components/Panel'
@@ -492,35 +492,58 @@ function DataSection() {
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [importError, setImportError] = useState('')
 
-  function handleExport() {
-    const s = useAppStore.getState()
-    const json = exportState(
-      { schemaVersion: s.schemaVersion, onboarded: s.onboarded, foods: s.foods, log: s.log, settings: s.settings },
-      new Date(),
-    )
+  function download(json: string, filename: string) {
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `nomnom-gacha-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  /** Mobile-first sharing: open the OS share sheet when it accepts files
+   *  (send straight to Messages/AirDrop/e-mail); otherwise download. */
+  async function shareOrDownload(json: string, filename: string) {
+    const file = new File([json], filename, { type: 'application/json' })
+    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Nom Nom Gacha' })
+        return
+      } catch (err) {
+        // User closed the share sheet — that's not a request to download.
+        if (err instanceof DOMException && err.name === 'AbortError') return
+      }
+    }
+    download(json, filename)
+  }
+
+  function currentState() {
+    const s = useAppStore.getState()
+    return {
+      schemaVersion: s.schemaVersion,
+      onboarded: s.onboarded,
+      foods: s.foods,
+      log: s.log,
+      settings: s.settings,
+    }
+  }
+
+  function handleExport() {
+    const stamp = new Date().toISOString().slice(0, 10)
+    download(exportState(currentState(), new Date()), `nomnom-gacha-backup-${stamp}.json`)
+  }
+
+  function handleShareSetup() {
+    const stamp = new Date().toISOString().slice(0, 10)
+    void shareOrDownload(exportSetup(currentState(), new Date()), `nomnom-gacha-setup-${stamp}.json`)
   }
 
   async function handleFile(file: File) {
     setImportError('')
     const text = await file.text()
-    const s = useAppStore.getState()
     try {
-      setPreview(
-        parseImport(text, {
-          schemaVersion: s.schemaVersion,
-          onboarded: s.onboarded,
-          foods: s.foods,
-          log: s.log,
-          settings: s.settings,
-        }),
-      )
+      setPreview(parseImport(text, currentState()))
     } catch (err) {
       const kind = err instanceof Error && err.message === 'not-json' ? 'NotJson' : 'NotNomnom'
       setImportError(t(`settings.importError${kind}`))
@@ -529,6 +552,12 @@ function DataSection() {
 
   return (
     <Panel ornate={false} className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-1">
+        <Button onClick={handleShareSetup} data-testid="share-setup">
+          📤 {t('settings.exportSetup')}
+        </Button>
+        <p className="font-body text-xs text-ink-soft">{t('settings.exportSetupHint')}</p>
+      </div>
       <div className="flex flex-col gap-1">
         <Button onClick={handleExport} data-testid="export">
           ⬇ {t('settings.export')}
@@ -560,7 +589,9 @@ function DataSection() {
         {preview && (
           <div className="flex flex-col gap-3">
             <p className="font-body text-base text-ink">
-              {t('settings.importPreview', { foods: preview.foods, log: preview.logEntries })}
+              {preview.kind === 'setup'
+                ? t('settings.importPreviewSetup', { foods: preview.foods, combos: preview.combos })
+                : t('settings.importPreviewBackup', { foods: preview.foods, log: preview.logEntries })}
             </p>
             <div className="flex gap-2">
               <Button

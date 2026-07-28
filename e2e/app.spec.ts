@@ -239,9 +239,38 @@ test.describe('parent settings', () => {
     await page.getByTestId('import').click()
     const chooser = await chooserPromise
     await chooser.setFiles(path!)
-    await expect(page.getByRole('dialog')).toContainText('15 foods')
+    await expect(page.getByRole('dialog')).toContainText('This backup contains 15 foods')
     await page.getByRole('button', { name: 'Import', exact: true }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
+  })
+
+  test('setup share round-trips without touching history', async ({ page }) => {
+    // Log a meal first so there is history to preserve.
+    await page.getByTestId('back').click()
+    await page.getByTestId('spin').click()
+    await expect(page.getByTestId('result-line')).toHaveCount(3, { timeout: 10_000 })
+    await page.getByTestId('result-line').first().click()
+
+    await page.getByTestId('nav-settings').click()
+    await enterPin(page)
+    await page.getByTestId('section-data').click()
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByTestId('share-setup').click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toContain('setup')
+    const path = await download.path()
+
+    const chooserPromise = page.waitForEvent('filechooser')
+    await page.getByTestId('import').click()
+    const chooser = await chooserPromise
+    await chooser.setFiles(path!)
+    await expect(page.getByRole('dialog')).toContainText('This setup contains 15 foods')
+    await page.getByRole('button', { name: 'Import', exact: true }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+
+    // History survived the setup import.
+    await page.getByTestId('section-history').click()
+    await expect(page.getByTestId('history-list').locator('li')).toHaveCount(1)
   })
 
   test('settings screen is accessible', async ({ page }) => {

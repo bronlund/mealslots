@@ -105,9 +105,8 @@
     "clearHistoryConfirm": "Delete the whole meal history? The collection book is built from it.",
     "starBadge": "Star food",
     "export": "Export backup",
-    "exportHint": "Saves foods, settings and history as a file. The PIN is never included.",
+    "exportHint": "Saves foods, settings and history as a file for this family only. The PIN is never included.",
     "import": "Import backup",
-    "importPreview": "This file contains {{foods}} foods and {{log}} logged meals. Replace what's on this device?",
     "importConfirm": "Import",
     "importErrorNotJson": "That file could not be read.",
     "importErrorNotNomnom": "That is not a Nom Nom Gacha backup file.",
@@ -118,7 +117,11 @@
     "jackpotCombos": "Custom combinations",
     "jackpotCombosHint": "A spin matching one of these food trios (in any order) also counts as a jackpot.",
     "addCombo": "Add combination",
-    "removeCombo": "Remove combination"
+    "removeCombo": "Remove combination",
+    "exportSetup": "Share setup",
+    "exportSetupHint": "Saves just the food list and machine settings — no meal history, no PIN. Perfect for sending to another device or family.",
+    "importPreviewBackup": "This backup contains {{foods}} foods and {{log}} logged meals. Replace everything on this device?",
+    "importPreviewSetup": "This setup contains {{foods}} foods and {{combos}} jackpot combinations. Replace the foods and machine settings on this device? Meal history, app settings and the PIN are kept."
   },
   "onboarding": {
     "welcomeTitle": "Welcome!",

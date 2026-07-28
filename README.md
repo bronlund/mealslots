@@ -14,7 +14,7 @@ Instead of cherries and bars, the reels show the child's own safe foods as cute 
 - **Smart randomness**: per-food weights, and recently eaten foods appear a little less often (never zero).
 - **Rare ⭐ star drops** (off by default): a parent can mark *challenge foods* that occasionally land with a golden 5-star-style celebration — gentle food exposure framed as a rare gacha pull, always re-spinnable.
 - **Collection book**: every food eaten unlocks its card, with stars at 1 / 5 / 15 eats. Repetition is celebrated, never punished.
-- **PIN-gated parent settings**: food list CRUD with a 34-icon library, machine configuration, meal history log, JSON export/import backup.
+- **PIN-gated parent settings**: food list CRUD with a 34-icon library, machine configuration, meal history log, JSON export/import — a full backup for this device, plus a shareable **setup file** (foods + machine settings, no history or PIN) for sending a configuration to another device or family.
 - **Norwegian + English**, day + night themes, synthesized sounds and haptics — all individually toggleable, with a calm reduced-motion mode.
 - **Installable offline PWA**: everything runs on the device. No accounts, no server, no tracking, no external requests.
 
