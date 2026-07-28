@@ -1,0 +1,144 @@
+@import 'tailwindcss';
+
+/*
+ * Nom Nom Gacha — "Teyvat Kitchen" design tokens.
+ * Day = warm cream/gold parchment; Night = starry navy/gold.
+ * The resolved theme is stamped on <html data-theme="day|night"> by useTheme.
+ */
+
+:root,
+[data-theme='day'] {
+  --nn-bg: #f5efdf;
+  --nn-bg-deep: #ece2c8;
+  --nn-surface: #fbf7ec;
+  --nn-surface-alt: #f3ecd9;
+  --nn-gold: #c8a05a;
+  --nn-gold-deep: #a37f3e;
+  --nn-ink: #3e3527;
+  --nn-ink-soft: #7a6d55;
+  --nn-accent: #e8a33d;
+  --nn-accent-deep: #c9821b;
+  --nn-star: #f5c542;
+  --nn-success: #7fa65a;
+  --nn-danger: #c25b4a;
+  --nn-glass: rgba(255, 252, 243, 0.55);
+  --nn-shadow: rgba(94, 75, 42, 0.25);
+}
+
+[data-theme='night'] {
+  --nn-bg: #141a2e;
+  --nn-bg-deep: #0e1322;
+  --nn-surface: #1e2740;
+  --nn-surface-alt: #263050;
+  --nn-gold: #d9b96c;
+  --nn-gold-deep: #b8974a;
+  --nn-ink: #ede5cf;
+  --nn-ink-soft: #b3a98e;
+  --nn-accent: #f0b653;
+  --nn-accent-deep: #d99a2f;
+  --nn-star: #f5c542;
+  --nn-success: #8fb86a;
+  --nn-danger: #d97b6a;
+  --nn-glass: rgba(24, 32, 58, 0.55);
+  --nn-shadow: rgba(0, 0, 0, 0.45);
+}
+
+@theme inline {
+  --color-bg: var(--nn-bg);
+  --color-bg-deep: var(--nn-bg-deep);
+  --color-surface: var(--nn-surface);
+  --color-surface-alt: var(--nn-surface-alt);
+  --color-gold: var(--nn-gold);
+  --color-gold-deep: var(--nn-gold-deep);
+  --color-ink: var(--nn-ink);
+  --color-ink-soft: var(--nn-ink-soft);
+  --color-accent: var(--nn-accent);
+  --color-accent-deep: var(--nn-accent-deep);
+  --color-star: var(--nn-star);
+  --color-success: var(--nn-success);
+  --color-danger: var(--nn-danger);
+  --color-glass: var(--nn-glass);
+  --font-display: 'Cinzel', 'Georgia', serif;
+  --font-body: 'Nunito', 'Segoe UI', sans-serif;
+  --shadow-panel: 0 4px 16px var(--nn-shadow);
+  --shadow-glow: 0 0 24px color-mix(in srgb, var(--nn-accent) 55%, transparent);
+}
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  background-color: var(--nn-bg);
+  color: var(--nn-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Parchment texture (day) / starfield (night) painted with pure gradients. */
+[data-theme='day'] body {
+  background-image:
+    radial-gradient(ellipse 80% 55% at 50% -10%, rgba(232, 163, 61, 0.13), transparent),
+    radial-gradient(circle at 15% 85%, rgba(200, 160, 90, 0.1), transparent 45%);
+}
+
+[data-theme='night'] body {
+  background-image:
+    radial-gradient(1.5px 1.5px at 18% 22%, rgba(245, 197, 66, 0.9), transparent 100%),
+    radial-gradient(1px 1px at 72% 12%, rgba(237, 229, 207, 0.8), transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 38%, rgba(245, 197, 66, 0.7), transparent 100%),
+    radial-gradient(1px 1px at 35% 55%, rgba(237, 229, 207, 0.6), transparent 100%),
+    radial-gradient(1px 1px at 55% 30%, rgba(237, 229, 207, 0.75), transparent 100%),
+    radial-gradient(1.5px 1.5px at 8% 60%, rgba(245, 197, 66, 0.6), transparent 100%),
+    radial-gradient(ellipse 90% 60% at 50% -15%, rgba(58, 76, 138, 0.5), transparent);
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+/* Motion is disabled both by OS preference and by the in-app override,
+   which stamps data-motion="reduced" on <html>. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) *,
+  :root:not([data-motion='full']) *::before,
+  :root:not([data-motion='full']) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+[data-motion='reduced'] *,
+[data-motion='reduced'] *::before,
+[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+@keyframes nn-glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--nn-accent) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 28px color-mix(in srgb, var(--nn-accent) 70%, transparent);
+  }
+}
+
+@keyframes nn-sway {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
