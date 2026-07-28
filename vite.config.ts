@@ -5,8 +5,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
 
+// GitHub Pages serves project sites under /<repo-name>/. Deriving the base
+// from CI's repository variable means renaming the repo needs no code change —
+// the next deploy simply lands on the new URL.
+const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'mealslots'
+
 export default defineConfig({
-  base: '/mealslots/',
+  base: `/${repoName}/`,
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
   },

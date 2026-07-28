@@ -7,6 +7,10 @@ const preinstalledChromium = '/opt/pw-browsers/chromium'
 const executablePath =
   !process.env.CI && fs.existsSync(preinstalledChromium) ? preinstalledChromium : undefined
 
+// Must match the base path derivation in vite.config.ts.
+const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'mealslots'
+const baseURL = `http://localhost:4173/${repoName}/`
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -15,7 +19,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   timeout: 45_000,
   use: {
-    baseURL: 'http://localhost:4173/mealslots/',
+    baseURL,
     trace: 'on-first-retry',
     launchOptions: {
       ...(executablePath ? { executablePath } : {}),
@@ -33,7 +37,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run build && npm run preview -- --port 4173 --strictPort',
-    url: 'http://localhost:4173/mealslots/',
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },
