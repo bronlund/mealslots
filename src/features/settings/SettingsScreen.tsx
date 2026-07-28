@@ -13,6 +13,8 @@ import { Pill } from '../../components/Pill'
 import { PinPad } from '../../components/PinPad'
 import { Modal } from '../../components/Modal'
 import { FoodEditor, type FoodDraft } from './FoodEditor'
+import { QrScanModal, QrShowModal } from './QrShare'
+import { decodeSetupPayload } from '../../data/qr'
 
 type Section = 'foods' | 'machine' | 'app' | 'history' | 'data'
 const SECTIONS: Section[] = ['foods', 'machine', 'app', 'history', 'data']
@@ -491,6 +493,8 @@ function DataSection() {
   const fileInput = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [importError, setImportError] = useState('')
+  const [showingQr, setShowingQr] = useState(false)
+  const [scanningQr, setScanningQr] = useState(false)
 
   function download(json: string, filename: string) {
     const blob = new Blob([json], { type: 'application/json' })
@@ -550,9 +554,28 @@ function DataSection() {
     }
   }
 
+  async function handleScanned(payload: string) {
+    setScanningQr(false)
+    setImportError('')
+    try {
+      const json = await decodeSetupPayload(payload)
+      setPreview(parseImport(json, currentState()))
+    } catch {
+      setImportError(t('settings.importErrorNotNomnom'))
+    }
+  }
+
   return (
     <Panel ornate={false} className="flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1">
+        <div className="flex gap-2">
+          <Button onClick={() => setShowingQr(true)} data-testid="show-qr" className="flex-1">
+            🔳 {t('settings.showQr')}
+          </Button>
+          <Button onClick={() => setScanningQr(true)} data-testid="scan-qr" className="flex-1">
+            📷 {t('settings.scanQr')}
+          </Button>
+        </div>
         <Button onClick={handleShareSetup} data-testid="share-setup">
           📤 {t('settings.exportSetup')}
         </Button>
@@ -585,6 +608,16 @@ function DataSection() {
           </p>
         )}
       </div>
+      <QrShowModal
+        open={showingQr}
+        getJson={() => exportSetup(currentState(), new Date())}
+        onClose={() => setShowingQr(false)}
+      />
+      <QrScanModal
+        open={scanningQr}
+        onDecoded={(payload) => void handleScanned(payload)}
+        onClose={() => setScanningQr(false)}
+      />
       <Modal open={preview != null} onClose={() => setPreview(null)} label={t('settings.import')}>
         {preview && (
           <div className="flex flex-col gap-3">

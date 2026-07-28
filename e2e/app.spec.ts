@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import jsQR from 'jsqr'
 import { appUrl, completeOnboarding, enterPin } from './helpers'
+import { decodeSetupPayload } from '../src/data/qr'
 
 test.describe('first run', () => {
   test('onboarding reaches the machine in a handful of taps', async ({ page }) => {
@@ -271,6 +273,36 @@ test.describe('parent settings', () => {
     // History survived the setup import.
     await page.getByTestId('section-history').click()
     await expect(page.getByTestId('history-list').locator('li')).toHaveCount(1)
+  })
+
+  test('the setup QR code renders and actually decodes to the setup', async ({ page }) => {
+    await page.getByTestId('section-data').click()
+    await page.getByTestId('show-qr').click()
+    await expect(page.getByTestId('qr-canvas')).toBeVisible()
+
+    // The canvas paints asynchronously; poll until jsQR can read it.
+    let payload = ''
+    await expect(async () => {
+      const image = await page.evaluate(() => {
+        const canvas = document.querySelector('[data-testid="qr-canvas"]') as HTMLCanvasElement
+        const ctx = canvas.getContext('2d')
+        if (!ctx || canvas.width === 0) return null
+        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        return { data: Array.from(pixels.data), width: pixels.width, height: pixels.height }
+      })
+      expect(image).not.toBeNull()
+      const code = jsQR(new Uint8ClampedArray(image!.data), image!.width, image!.height)
+      expect(code).not.toBeNull()
+      payload = code!.data
+    }).toPass({ timeout: 10_000 })
+
+    const json = await decodeSetupPayload(payload)
+    const setup = JSON.parse(json)
+    expect(setup.app).toBe('nomnom-gacha')
+    expect(setup.kind).toBe('setup')
+    expect(setup.foods).toHaveLength(15)
+    expect(setup.machine.slotMode).toBe('single')
+    expect(setup.log).toBeUndefined()
   })
 
   test('settings screen is accessible', async ({ page }) => {
