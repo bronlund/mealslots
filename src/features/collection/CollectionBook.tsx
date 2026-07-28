@@ -39,9 +39,9 @@ export function CollectionBook() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-center font-display text-2xl font-bold text-gold-deep">
+      <h1 className="text-center font-display text-2xl font-bold text-gold-deep">
         {t('collection.title')}
-      </h2>
+      </h1>
       {sorted.length === 0 || log.length === 0 ? (
         <Panel ornate={false} className="p-6 text-center">
           <p className="font-body text-base text-ink-soft">{t('collection.empty')}</p>

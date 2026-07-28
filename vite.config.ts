@@ -43,6 +43,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // The whole app must work offline; fonts and icons are precached.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // Control open pages as soon as the first install activates, so the
+        // app is offline-capable from the very first visit.
+        clientsClaim: true,
       },
     }),
   ],

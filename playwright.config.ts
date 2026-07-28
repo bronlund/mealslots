@@ -17,11 +17,19 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173/mealslots/',
     trace: 'on-first-retry',
-    launchOptions: executablePath ? { executablePath } : {},
+    launchOptions: {
+      ...(executablePath ? { executablePath } : {}),
+      // The remote dev container runs as root, where Chromium's sandbox
+      // cannot start; CI runs unprivileged and ignores the flag's absence.
+      args: process.env.CI ? [] : ['--no-sandbox'],
+    },
   },
   projects: [
-    { name: 'android', use: { ...devices['Pixel 7'] } },
-    { name: 'ios', use: { ...devices['iPhone 14'] } },
+    // Both projects run on the Chromium engine (the only browser installed
+    // here and in CI); the iPhone project contributes its viewport, touch and
+    // device-scale characteristics rather than the WebKit engine.
+    { name: 'android', use: { ...devices['Pixel 7'], browserName: 'chromium' } },
+    { name: 'ios', use: { ...devices['iPhone 14'], browserName: 'chromium' } },
   ],
   webServer: {
     command: 'npm run build && npm run preview -- --port 4173 --strictPort',

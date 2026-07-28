@@ -23,9 +23,9 @@ export function SettingsScreen() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-center font-display text-2xl font-bold text-gold-deep">
+      <h1 className="text-center font-display text-2xl font-bold text-gold-deep">
         {t('settings.title')}
-      </h2>
+      </h1>
       <div className="flex flex-wrap justify-center gap-1.5">
         {SECTIONS.map((s) => (
           <Pill key={s} active={section === s} onClick={() => setSection(s)} data-testid={`section-${s}`}>

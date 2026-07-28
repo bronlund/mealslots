@@ -48,7 +48,7 @@ export function PinGate({ onUnlock }: PinGateProps) {
   return (
     <div className="flex flex-col items-center gap-5 py-4">
       <Panel className="flex w-full max-w-sm flex-col items-center gap-4 p-6">
-        <h2 className="font-display text-xl font-bold text-gold-deep">{t('pin.title')}</h2>
+        <h1 className="font-display text-xl font-bold text-gold-deep">{t('pin.title')}</h1>
         {mode === 'enter' ? (
           <>
             <PinPad label={t('pin.enter')} error={error} onSubmit={(pin) => void handleEnter(pin)} />

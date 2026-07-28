@@ -102,5 +102,18 @@ useAppStore.subscribe((s) => {
 export function persistNow(): void {
   clearTimeout(saveTimer)
   const { schemaVersion, onboarded, foods, log, settings } = useAppStore.getState()
-  saveState({ schemaVersion, onboarded, foods, log, settings })
+  try {
+    saveState({ schemaVersion, onboarded, foods, log, settings })
+  } catch {
+    // Storage full or unavailable — the app keeps working from memory.
+  }
+}
+
+// The debounce must never lose a write when the app is closed or backgrounded
+// (PWAs get killed liberally on mobile) — flush pending state on the way out.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', persistNow)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') persistNow()
+  })
 }

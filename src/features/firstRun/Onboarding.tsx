@@ -48,7 +48,7 @@ export function Onboarding() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center p-4">
+    <main className="flex min-h-dvh items-center justify-center p-4">
       <motion.div
         key={step}
         initial={{ opacity: 0, y: 16 }}
@@ -146,6 +146,6 @@ export function Onboarding() {
           )}
         </Panel>
       </motion.div>
-    </div>
+    </main>
   )
 }
